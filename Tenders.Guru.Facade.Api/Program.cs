@@ -13,12 +13,13 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddMemoryCache();
+
 builder.Services.AddAutoMapper(cfg => {}, typeof(TendersProfile));
 
 builder.Services.AddOptions<TendersApiOptions>()
     .BindConfiguration(TendersApiOptions.TendersApiUrlSection);
 
-// builder.Services.AddHttpClient();
 var clientName = "TendersApiClient";
 builder.Services.AddHttpClient<ITendersApiService, TendersApiService>(clientName, client =>
 {

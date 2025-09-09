@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using AutoMapper;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Tenders.Guru.Facade.Api.Config;
 using Tenders.Guru.Facade.Api.Exceptions;
@@ -9,7 +10,7 @@ namespace Tenders.Guru.Facade.Api.Services;
 public interface ITendersApiService
 {
     Task<TenderDto> GenTender(int tenderId, CancellationToken cancellationToken);
-    Task<TendersResponse> GetTenders(SearchParams searchParams, CancellationToken cancellationToken);
+    Task<IEnumerable<TenderDto>> GetTenders(SearchParams searchParams, CancellationToken cancellationToken);
     // IEnumerable<Tender> GetTendersByPrice(string currency, SearchParams searchParams);
     // IEnumerable<Tender> GetOrderedTendersByPrice(string currency, SearchParams searchParams);
     // IEnumerable<Tender> GetTendersByDate(DateTime dateTime, SearchParams searchParams);
@@ -20,10 +21,11 @@ public interface ITendersApiService
 public class SearchParams
 {
     public PageParams PageParams { get; set; }
-    public int Price { get; set; }
-    public DateTime Date { get; set; }
-    public string OrderBy { get; set; }
-    public Order Order { get; set; } = Order.Asc;
+    
+    public double? PriceInEur { get; set; }
+    public DateOnly? Date { get; set; }
+    public string? OrderBy { get; set; }
+    public Order? Order { get; set; }
 }
 
 public enum Order
@@ -180,7 +182,7 @@ public class SupplierInfo
     public int Id { get; set; }
     
     [JsonPropertyName("slug")]
-    public string Slug { get; set; }
+    public object Slug { get; set; } // string or int
     
     [JsonPropertyName("name")]
     public string Name { get; set; }
@@ -216,7 +218,7 @@ public class TendersResponse
     public List<Tender> Data { get; set; }
 }
 
-public class Supplier
+public class SupplierDto
 {
     public int Id { get; set; }
     public string Name { get; set; }
@@ -226,17 +228,10 @@ public class TenderDto
 {
     public int Id { get; set; }
     public string Date { get; set; }
-    public string? DeadlineDate { get; set; }
     public string Title { get; set; }
-    public string Category { get; set; }
     public string Description { get; set; }
-    public string Sid { get; set; }
     public decimal? AwardedValueEur { get; set; }
-    public string? AwardedCurrency { get; set; }
-    public PurchaserDto Purchaser { get; set; }
-    public TenderTypeDto Type { get; set; }
-    public List<string>? Indicators { get; set; }
-    public List<AwardDto>? Awarded { get; set; }
+    public List<SupplierDto> Suppliers { get; set; }
 }
 
 public class PurchaserDto
@@ -264,36 +259,118 @@ public class AwardDto
     public List<SupplierDto> Suppliers { get; set; }
 }
 
-public class SupplierDto
+public class TendersApiService(HttpClient httpClient, IMapper mapper, IMemoryCache memoryCache) : ITendersApiService
 {
-    public int Id { get; set; }
-    public string Slug { get; set; }
-    public string Name { get; set; }
-}
-
-public class TendersApiService(HttpClient httpClient, IMapper mapper) : ITendersApiService
-{
-    private const string DefaultCurrency = "EUR";
+    private const string TendersEndpoint = "tenders";
+    private const int PageLimitation = 10; // todo: 100
+    private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(10);
     
     public async Task<TenderDto> GenTender(int tenderId, CancellationToken cancellationToken)
     {
-        var response = await httpClient.GetFromJsonAsync<Tender>(tenderId.ToString(), cancellationToken);
-
-        if (response is null)
+        var cacheKey = $"tender_{tenderId}";
+        
+        if (!memoryCache.TryGetValue(cacheKey, out Tender? response))
         {
-            throw new TendersApiException($"Tender {tenderId} not found");
+            response = await httpClient.GetFromJsonAsync<Tender>($"{TendersEndpoint}/{tenderId.ToString()}", cancellationToken);
+
+            if (response is null)
+            {
+                throw new TendersApiException($"Tender {tenderId} not found");
+            }
+
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = CacheExpiration,
+                Priority = CacheItemPriority.Normal
+            };
+            
+            memoryCache.Set(cacheKey, response, cacheOptions);
         }
 
-        return mapper.Map<TenderDto>(response);
+        return mapper.Map<TenderDto>(response!);
     }
-
-    public async Task<TendersResponse> GetTenders(SearchParams searchParams, CancellationToken cancellationToken)
+    
+    public async Task<IEnumerable<TenderDto>> GetTenders(SearchParams searchParams, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        const string cacheKey = "tenders_response";
+        
+        if (!memoryCache.TryGetValue(cacheKey, out List<Tender>? allTenders))
+        {
+            allTenders = new List<Tender>();
+            
+            var tasks = new List<Task<TendersResponse?>>();
+            
+            for (int i = 1; i <= PageLimitation; i++) // api starts page index from 1
+            {
+                tasks.Add(httpClient.GetFromJsonAsync<TendersResponse>($"{TendersEndpoint}?page={i}", cancellationToken));
+            }
+            
+            var responses = await Task.WhenAll(tasks);
+            
+            foreach (var response in responses)
+            {
+                if (response is null)
+                {
+                    throw new TendersApiException("No tenders found");
+                }
+                
+                allTenders.AddRange(response.Data);
+            }
+
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = CacheExpiration,
+                Priority = CacheItemPriority.High
+            };
+            
+            memoryCache.Set(cacheKey, allTenders, cacheOptions);
+        }
+
+        IEnumerable<Tender> tenders = allTenders!;
+
+        tenders = ApplySearch(tenders, searchParams);
+
+        if (!string.IsNullOrEmpty(searchParams.OrderBy))
+        {
+            tenders = ApplyOrdering(tenders, searchParams.OrderBy, searchParams.Order);
+        }
+
+        tenders = tenders
+            .Skip(searchParams.PageParams.PageSize * searchParams.PageParams.PageIdx)
+            .Take(searchParams.PageParams.PageSize * searchParams.PageParams.PageIdx + searchParams.PageParams.PageSize);
+
+        return mapper.Map<IEnumerable<TenderDto>>(tenders.ToList());
     }
 
     public async Task<IEnumerable<TenderDto>> GetWonTendersBySupplierId(int supplierId, SearchParams searchParams, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
+    }
+
+    private static IEnumerable<Tender> ApplySearch(IEnumerable<Tender> tenders, SearchParams searchParams)
+    {
+        if (searchParams.PriceInEur is not null)
+        {
+            tenders = tenders.Where(x => x.AwardedValueEur == searchParams.PriceInEur.ToString());
+        }
+
+        if (searchParams.Date.HasValue)
+        {
+            tenders = tenders.Where(x => x.Date == searchParams.Date.Value.ToString("yyyy-MM-dd"));
+        }
+
+        return tenders;
+    }
+
+    private static IEnumerable<Tender> ApplyOrdering(IEnumerable<Tender> tenders, string orderBy, Order? order)
+    {
+        var isDescending = order == Order.Desc;
+        
+        return orderBy.ToLower() switch
+        {
+            "date" => isDescending ? tenders.OrderByDescending(x => x.Date) : tenders.OrderBy(x => x.Date),
+            "price_eur" => isDescending ? tenders.OrderByDescending(x => x.AwardedValueEur) : tenders.OrderBy(x => x.AwardedValueEur),
+            _ => tenders
+        };
     }
 }
