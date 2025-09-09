@@ -19,7 +19,7 @@ builder.Services.AddOptions<TendersApiOptions>()
     .BindConfiguration(TendersApiOptions.TendersSection)
     .ValidateDataAnnotations();
 
-builder.Services.AddHttpClient<ITendersApiService, TendersApiService>(TendersApiService.HttpClientName, client =>
+builder.Services.AddHttpClient<ITendersService, TendersService>(TendersService.HttpClientName, client =>
 {
     client.BaseAddress = new Uri(builder.Configuration[$"{TendersApiOptions.TendersSection}:{nameof(TendersApiOptions.ApiUrl)}"]!);
     client.DefaultRequestHeaders.UserAgent.ParseAdd("tenders-service");

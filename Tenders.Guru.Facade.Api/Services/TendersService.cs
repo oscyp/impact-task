@@ -9,13 +9,13 @@ using Tenders.Guru.Facade.Api.Models.TenderApiModels;
 
 namespace Tenders.Guru.Facade.Api.Services;
 
-public interface ITendersApiService
+public interface ITendersService
 {
     Task<TenderDto> GenTender(int tenderId, CancellationToken cancellationToken);
     Task<SearchTendersResponse> SearchTenders(SearchParams searchParams, CancellationToken cancellationToken);
 }
 
-public class TendersApiService(HttpClient httpClient, IMapper mapper, IMemoryCache memoryCache, IOptions<TendersApiOptions> options) : ITendersApiService
+public class TendersService(HttpClient httpClient, IMapper mapper, IMemoryCache memoryCache, IOptions<TendersApiOptions> options) : ITendersService
 {
     public const string HttpClientName = "TendersApiClient";
     private const string TendersEndpoint = "tenders";

@@ -8,7 +8,7 @@ namespace Tenders.Guru.Facade.Api.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class TendersController(ITendersApiService tendersApiService, ILogger<TendersController> logger)
+public class TendersController(ITendersService tendersService, ILogger<TendersController> logger)
     : ControllerBase
 {
     private readonly ILogger<TendersController> _logger = logger;
@@ -17,7 +17,7 @@ public class TendersController(ITendersApiService tendersApiService, ILogger<Ten
     [ProducesResponseType(typeof(TenderDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Get(int tenderId, CancellationToken cancellationToken)
     {
-        var result = await tendersApiService.GenTender(tenderId, cancellationToken);
+        var result = await tendersService.GenTender(tenderId, cancellationToken);
 
         return Ok(result);
     }
@@ -26,7 +26,7 @@ public class TendersController(ITendersApiService tendersApiService, ILogger<Ten
     [ProducesResponseType(typeof(IEnumerable<TenderDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> SearchTenders([FromBody] SearchParams searchParams, CancellationToken cancellationToken)
     {
-        var result = await tendersApiService.SearchTenders(searchParams, cancellationToken);
+        var result = await tendersService.SearchTenders(searchParams, cancellationToken);
 
         return Ok(result);
     }
