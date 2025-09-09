@@ -11,7 +11,7 @@ namespace Tenders.Guru.Facade.Api.Services;
 
 public interface ITendersService
 {
-    Task<TenderDto> GenTender(int tenderId, CancellationToken cancellationToken);
+    Task<TenderDto> GetTender(int tenderId, CancellationToken cancellationToken);
     Task<SearchTendersResponse> SearchTenders(SearchTendersParams searchTendersParams, CancellationToken cancellationToken);
 }
 
@@ -22,7 +22,7 @@ public class TendersService(HttpClient httpClient, IMapper mapper, IMemoryCache 
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(10);
     private int PageLimitation => options.Value.MaxPageSize;
     
-    public async Task<TenderDto> GenTender(int tenderId, CancellationToken cancellationToken)
+    public async Task<TenderDto> GetTender(int tenderId, CancellationToken cancellationToken)
     {
         var cacheKey = $"tender_{tenderId}";
         

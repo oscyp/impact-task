@@ -20,7 +20,7 @@ public class TendersController(ITendersService tendersService, ILogger<TendersCo
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Get(int tenderId, CancellationToken cancellationToken)
     {
-        var result = await tendersService.GenTender(tenderId, cancellationToken);
+        var result = await tendersService.GetTender(tenderId, cancellationToken);
 
         return Ok(result);
     }
