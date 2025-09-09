@@ -17,7 +17,8 @@ builder.Services.AddAutoMapper(cfg => {}, typeof(TendersProfile));
 
 builder.Services.AddOptions<TendersApiOptions>()
     .BindConfiguration(TendersApiOptions.TendersSection)
-    .ValidateDataAnnotations();
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 builder.Services.AddHttpClient<ITendersService, TendersService>(TendersService.HttpClientName, client =>
 {

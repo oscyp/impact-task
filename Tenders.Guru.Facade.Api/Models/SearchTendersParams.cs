@@ -1,10 +1,10 @@
 namespace Tenders.Guru.Facade.Api.Models;
 
-public class SearchParams
+public class SearchTendersParams
 {
     public PageParams PageParams { get; set; } = new() { PageIdx = 0, PageSize = 50 };
     
-    public double? PriceInEur { get; set; }
+    public decimal? PriceInEur { get; set; }
     public DateOnly? Date { get; set; }
     public string? OrderBy { get; set; }
     public Order? Order { get; set; }

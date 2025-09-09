@@ -15,6 +15,9 @@ public class TendersController(ITendersService tendersService, ILogger<TendersCo
 
     [HttpGet("{tenderId}")]
     [ProducesResponseType(typeof(TenderDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Get(int tenderId, CancellationToken cancellationToken)
     {
         var result = await tendersService.GenTender(tenderId, cancellationToken);
@@ -24,11 +27,12 @@ public class TendersController(ITendersService tendersService, ILogger<TendersCo
 
     [HttpPost]
     [ProducesResponseType(typeof(IEnumerable<TenderDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> SearchTenders([FromBody] SearchParams searchParams, CancellationToken cancellationToken)
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> SearchTenders([FromBody] SearchTendersParams searchTendersParams, CancellationToken cancellationToken)
     {
-        var result = await tendersService.SearchTenders(searchParams, cancellationToken);
+        var result = await tendersService.SearchTenders(searchTendersParams, cancellationToken);
 
         return Ok(result);
     }
-
 }

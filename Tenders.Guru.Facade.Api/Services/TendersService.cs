@@ -12,7 +12,7 @@ namespace Tenders.Guru.Facade.Api.Services;
 public interface ITendersService
 {
     Task<TenderDto> GenTender(int tenderId, CancellationToken cancellationToken);
-    Task<SearchTendersResponse> SearchTenders(SearchParams searchParams, CancellationToken cancellationToken);
+    Task<SearchTendersResponse> SearchTenders(SearchTendersParams searchTendersParams, CancellationToken cancellationToken);
 }
 
 public class TendersService(HttpClient httpClient, IMapper mapper, IMemoryCache memoryCache, IOptions<TendersApiOptions> options) : ITendersService
@@ -47,7 +47,7 @@ public class TendersService(HttpClient httpClient, IMapper mapper, IMemoryCache 
         return mapper.Map<TenderDto>(response!);
     }
     
-    public async Task<SearchTendersResponse> SearchTenders(SearchParams searchParams, CancellationToken cancellationToken)
+    public async Task<SearchTendersResponse> SearchTenders(SearchTendersParams searchTendersParams, CancellationToken cancellationToken)
     {
         const string cacheKey = "tenders_response";
         
@@ -85,18 +85,18 @@ public class TendersService(HttpClient httpClient, IMapper mapper, IMemoryCache 
 
         IEnumerable<Tender> tenders = allTenders!;
 
-        tenders = ApplySearch(tenders, searchParams);
+        tenders = ApplySearch(tenders, searchTendersParams);
 
-        if (!string.IsNullOrEmpty(searchParams.OrderBy))
+        if (!string.IsNullOrEmpty(searchTendersParams.OrderBy))
         {
-            tenders = ApplyOrdering(tenders, searchParams.OrderBy, searchParams.Order);
+            tenders = ApplyOrdering(tenders, searchTendersParams.OrderBy, searchTendersParams.Order);
         }
 
         var filteredTenders = tenders.ToList();
 
         var pagedTenders = filteredTenders
-            .Skip(searchParams.PageParams.PageSize * searchParams.PageParams.PageIdx)
-            .Take(searchParams.PageParams.PageSize * searchParams.PageParams.PageIdx + searchParams.PageParams.PageSize)
+            .Skip(searchTendersParams.PageParams.PageIdx * searchTendersParams.PageParams.PageSize)
+            .Take(searchTendersParams.PageParams.PageSize)
             .ToList();
 
         var mappedTenders = mapper.Map<IEnumerable<TenderDto>>(pagedTenders);
@@ -105,21 +105,21 @@ public class TendersService(HttpClient httpClient, IMapper mapper, IMemoryCache 
     }
 
 
-    private static IEnumerable<Tender> ApplySearch(IEnumerable<Tender> tenders, SearchParams searchParams)
+    private static IEnumerable<Tender> ApplySearch(IEnumerable<Tender> tenders, SearchTendersParams searchTendersParams)
     {
-        if (searchParams.PriceInEur is not null)
+        if (searchTendersParams.PriceInEur is not null)
         {
-            tenders = tenders.Where(x => x.AwardedValueEur == searchParams.PriceInEur.ToString());
+            tenders = tenders.Where(x => x.AwardedValueEur == searchTendersParams.PriceInEur.ToString());
         }
 
-        if (searchParams.Date.HasValue)
+        if (searchTendersParams.Date.HasValue)
         {
-            tenders = tenders.Where(x => x.Date == searchParams.Date.Value.ToString("yyyy-MM-dd"));
+            tenders = tenders.Where(x => x.Date == searchTendersParams.Date.Value.ToString("yyyy-MM-dd"));
         }
 
-        if (searchParams.SupplierId.HasValue)
+        if (searchTendersParams.SupplierId.HasValue)
         {
-            tenders = tenders.Where(tender => tender.Awarded.Any(award => award.Suppliers.Any(supplier => supplier.Id == searchParams.SupplierId.Value)));
+            tenders = tenders.Where(tender => tender.Awarded.Any(award => award.Suppliers.Any(supplier => supplier.Id == searchTendersParams.SupplierId.Value)));
         }
 
         return tenders;
