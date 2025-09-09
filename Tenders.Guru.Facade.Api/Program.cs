@@ -1,5 +1,3 @@
-using System.Reflection;
-using AutoMapper;
 using Tenders.Guru.Facade.Api.Config;
 using Tenders.Guru.Facade.Api.MappingProfiles;
 using Tenders.Guru.Facade.Api.Services;
@@ -18,16 +16,14 @@ builder.Services.AddMemoryCache();
 builder.Services.AddAutoMapper(cfg => {}, typeof(TendersProfile));
 
 builder.Services.AddOptions<TendersApiOptions>()
-    .BindConfiguration(TendersApiOptions.TendersApiUrlSection);
+    .BindConfiguration(TendersApiOptions.TendersSection)
+    .ValidateDataAnnotations();
 
-var clientName = "TendersApiClient";
-builder.Services.AddHttpClient<ITendersApiService, TendersApiService>(clientName, client =>
+builder.Services.AddHttpClient<ITendersApiService, TendersApiService>(TendersApiService.HttpClientName, client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration[TendersApiOptions.TendersApiUrlSection]!);
-    client.DefaultRequestHeaders.UserAgent.ParseAdd(".NET 8");
+    client.BaseAddress = new Uri(builder.Configuration[$"{TendersApiOptions.TendersSection}:{nameof(TendersApiOptions.ApiUrl)}"]!);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("tenders-service");
 });
-
-// builder.Services.AddTransient<ITendersApiService, TendersApiService>();
 
 var app = builder.Build();
 
