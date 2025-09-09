@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using AutoMapper;
@@ -7,12 +6,10 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
-using NUnit.Framework;
 using Tenders.Guru.Facade.Api.Config;
 using Tenders.Guru.Facade.Api.Exceptions;
 using Tenders.Guru.Facade.Api.MappingProfiles;
 using Tenders.Guru.Facade.Api.Models;
-using Tenders.Guru.Facade.Api.Models.DTOs;
 using Tenders.Guru.Facade.Api.Models.TenderApiModels;
 using Tenders.Guru.Facade.Api.Services;
 using Tenders.Guru.Facade.Api.Tests.Testing;
@@ -192,7 +189,7 @@ public class TendersServiceTests
     }
 
     [Test]
-    public async Task Given_NoCache_When_GetTenderByIdNotFound_Then_ThrowsException()
+    public Task Given_NoCache_When_GetTenderByIdNotFound_Then_ThrowsException()
     {
         // Arrange: mock HTTP 404 response
         var httpClient = MockHttpMessageHandler.CreateWithNotFound();
@@ -201,51 +198,57 @@ public class TendersServiceTests
         // Act & Assert: should throw TendersApiException
         var ex = Assert.ThrowsAsync<TendersApiException>(() => 
             service.GetTender(999, CancellationToken.None));
-        Assert.That(ex?.Message, Does.Contain("Tender 999 not found"));
+        Assert.That(ex?.Message, Does.Contain("Error fetching data from tenders/999"));
+        Assert.That(ex?.InnerException, Is.TypeOf<HttpRequestException>());
+        return Task.CompletedTask;
     }
 
     [Test]
-    public async Task Given_NoCache_When_SearchTenders_Then_CallsMultiplePagesAndAggregates()
+    public async Task Given_NoCache_When_SearchTenders_Then_AggregatesSuccessfulPages()
     {
-        // Arrange: mock responses for multiple pages
-        var page1Response = new TendersResponse
-        {
-            PageCount = 2,
-            PageNumber = 1,
-            PageSize = 50,
-            Total = 100,
-            Data = new List<Tender>
-            {
-                new Tender { Id = 1, Date = "2024-01-01", Title = "T1", Description = "D1", AwardedValueEur = "100", Awarded = new List<Award>() },
-                new Tender { Id = 2, Date = "2024-01-02", Title = "T2", Description = "D2", AwardedValueEur = "200", Awarded = new List<Award>() }
-            }
-        };
-        var page2Response = new TendersResponse
-        {
-            PageCount = 2,
-            PageNumber = 2,
-            PageSize = 50,
-            Total = 100,
-            Data = new List<Tender>
-            {
-                new Tender { Id = 3, Date = "2024-01-03", Title = "T3", Description = "D3", AwardedValueEur = "300", Awarded = new List<Award>() }
-            }
-        };
-
-        var responses = new[]
-        {
-            CreateJsonResponse(page1Response),
-            CreateJsonResponse(page2Response)
-        };
+        // Arrange: create successful responses for first few pages
+        var responses = new List<HttpResponseMessage>();
         
-        var httpClient = MockHttpMessageHandler.CreateWithMultipleResponses(responses);
+        // Create 3 successful pages
+        for (int i = 1; i <= 3; i++)
+        {
+            var pageResponse = new TendersResponse
+            {
+                PageCount = 3,
+                PageNumber = i,
+                PageSize = 50,
+                Total = 150,
+                Data = new List<Tender>
+                {
+                    new Tender { Id = i, Date = $"2024-01-0{i}", Title = $"T{i}", Description = $"D{i}", AwardedValueEur = $"{i * 100}", Awarded = new List<Award>() }
+                }
+            };
+            responses.Add(CreateJsonResponse(pageResponse));
+        }
+        
+        // For remaining pages, we'll let them fail naturally or create empty successful responses
+        // Since the service now throws on HttpRequestException, we'll create empty successful responses
+        for (int i = 4; i <= 100; i++)
+        {
+            var emptyResponse = new TendersResponse
+            {
+                PageCount = 3,
+                PageNumber = i,
+                PageSize = 50,
+                Total = 150,
+                Data = new List<Tender>()
+            };
+            responses.Add(CreateJsonResponse(emptyResponse));
+        }
+        
+        var httpClient = MockHttpMessageHandler.CreateWithMultipleResponses(responses.ToArray());
         var service = new TendersService(httpClient, _mapper, _memoryCache, _options);
         var searchParams = new SearchTendersParams { PageParams = new PageParams { PageIdx = 0, PageSize = 10 } };
 
-        // Act: call SearchTenders which should aggregate multiple pages
+        // Act: call SearchTenders which will fetch all pages up to MaxPageSize
         var result = await service.SearchTenders(searchParams, CancellationToken.None);
 
-        // Assert: returns aggregated data from both pages
+        // Assert: returns aggregated data from successful pages
         Assert.That(result.Tenders.Count(), Is.EqualTo(3));
         Assert.That(result.Total, Is.EqualTo(3));
         var ids = result.Tenders.Select(t => t.Id).ToArray();

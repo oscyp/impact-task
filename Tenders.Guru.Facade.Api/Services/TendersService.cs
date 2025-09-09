@@ -2,7 +2,7 @@ using AutoMapper;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Tenders.Guru.Facade.Api.Config;
-using Tenders.Guru.Facade.Api.Exceptions;
+using Tenders.Guru.Facade.Api.Extensions;
 using Tenders.Guru.Facade.Api.Models;
 using Tenders.Guru.Facade.Api.Models.DTOs;
 using Tenders.Guru.Facade.Api.Models.TenderApiModels;
@@ -28,12 +28,7 @@ public class TendersService(HttpClient httpClient, IMapper mapper, IMemoryCache 
         
         if (!memoryCache.TryGetValue(cacheKey, out Tender? response))
         {
-            response = await httpClient.GetFromJsonAsync<Tender>($"{TendersEndpoint}/{tenderId.ToString()}", cancellationToken);
-
-            if (response is null)
-            {
-                throw new TendersApiException($"Tender {tenderId} not found");
-            }
+            response = await httpClient.GetFromJsonAsyncSafe<Tender>($"{TendersEndpoint}/{tenderId.ToString()}", cancellationToken);
 
             var cacheOptions = new MemoryCacheEntryOptions
             {
@@ -55,22 +50,17 @@ public class TendersService(HttpClient httpClient, IMapper mapper, IMemoryCache 
         {
             allTenders = new List<Tender>();
             
-            var tasks = new List<Task<TendersResponse?>>();
+            var tasks = new List<Task<TendersResponse>>();
             
             for (int i = 1; i <= PageLimitation; i++) // api starts page index from 1
             {
-                tasks.Add(httpClient.GetFromJsonAsync<TendersResponse>($"{TendersEndpoint}?page={i}", cancellationToken));
+                tasks.Add(httpClient.GetFromJsonAsyncSafe<TendersResponse>($"{TendersEndpoint}?page={i}", cancellationToken));
             }
             
             var responses = await Task.WhenAll(tasks);
             
             foreach (var response in responses)
             {
-                if (response is null)
-                {
-                    throw new TendersApiException("No tenders found");
-                }
-                
                 allTenders.AddRange(response.Data);
             }
 
