@@ -203,15 +203,6 @@ public class TendersServiceTests
         return Task.CompletedTask;
     }
 
-    private static HttpResponseMessage CreateJsonResponse<T>(T responseObject)
-    {
-        var json = JsonSerializer.Serialize(responseObject);
-        return new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StringContent(json, Encoding.UTF8, "application/json")
-        };
-    }
-
     private TendersService CreateService()
     {
         var httpClient = MockHttpMessageHandler.CreateWithResponse(new object());

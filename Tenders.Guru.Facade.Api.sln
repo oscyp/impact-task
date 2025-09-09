@@ -4,6 +4,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tenders.Guru.Facade.Api", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tenders.Guru.Facade.Api.Tests", "Tenders.Guru.Facade.Api.Tests\Tenders.Guru.Facade.Api.Tests.csproj", "{DD5C3A9B-875E-498D-90AB-74FDB29B0A3B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution items", "Solution items", "{F2F30B27-5DA6-41FC-8A5F-C8CC58960E73}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
