@@ -1,6 +1,110 @@
 @Tenders.Guru.Facade.Api_HostAddress = http://localhost:5135
 
-GET {{Tenders.Guru.Facade.Api_HostAddress}}/weatherforecast/
+### Get tender by ID
+GET {{Tenders.Guru.Facade.Api_HostAddress}}/tenders/586940
 Accept: application/json
+
+###
+
+### Search tenders - basic request (all parameters optional)
+POST {{Tenders.Guru.Facade.Api_HostAddress}}/tenders
+Content-Type: application/json
+
+{
+  "pageParams": {
+    "pageIdx": 0,
+    "pageSize": 10
+  }
+}
+
+###
+
+### Search tenders - filter by price
+POST {{Tenders.Guru.Facade.Api_HostAddress}}/tenders
+Content-Type: application/json
+
+{
+  "pageParams": {
+    "pageIdx": 0,
+    "pageSize": 20
+  },
+  "priceInEur": 805.41
+}
+
+###
+
+### Search tenders - order by price descending
+POST {{Tenders.Guru.Facade.Api_HostAddress}}/tenders
+Content-Type: application/json
+
+{
+  "pageParams": {
+    "pageIdx": 0,
+    "pageSize": 15
+  },
+  "orderBy": "price_eur",
+  "order": 1
+}
+
+###
+
+### Search tenders - order by date ascending
+POST {{Tenders.Guru.Facade.Api_HostAddress}}/tenders
+Content-Type: application/json
+
+{
+  "pageParams": {
+    "pageIdx": 0,
+    "pageSize": 25
+  },
+  "orderBy": "date",
+  "order": 0
+}
+
+###
+
+### Search tenders - filter by date
+POST {{Tenders.Guru.Facade.Api_HostAddress}}/tenders
+Content-Type: application/json
+
+{
+  "pageParams": {
+    "pageIdx": 0,
+    "pageSize": 10
+  },
+  "date": "2023-05-03"
+}
+
+###
+
+### Search tenders - filter by supplier ID
+POST {{Tenders.Guru.Facade.Api_HostAddress}}/tenders
+Content-Type: application/json
+
+{
+  "pageParams": {
+    "pageIdx": 0,
+    "pageSize": 10
+  },
+  "supplierId": 88
+}
+
+###
+
+### Search tenders - complex query with multiple filters
+POST {{Tenders.Guru.Facade.Api_HostAddress}}/tenders
+Content-Type: application/json
+
+{
+  "pageParams": {
+    "pageIdx": 0,
+    "pageSize": 30
+  },
+  "priceInEur": 805.41,
+  "date": "2023-05-03",
+  "orderBy": "price_eur",
+  "order": 1,
+  "supplierId": 88
+}
 
 ###

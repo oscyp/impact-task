@@ -68,6 +68,11 @@ Each tender response includes:
 4. **Access Swagger UI** (for testing and documentation)
    - Navigate to `https://localhost:7210/swagger` or `http://localhost:5135/swagger`
 
+5. **Test with HTTP requests** (alternative to Swagger)
+   - Use the `Tenders.Guru.Facade.Api.http` file with your IDE (Visual Studio Code, JetBrains IDEs, etc.)
+   - This file contains ready-to-use example requests for all API endpoints
+   - Simply click the "Send Request" button next to each request in your IDE
+
 ## API Endpoints
 
 ### 1. Get Tender by ID
@@ -94,11 +99,11 @@ Searches for tenders with various filtering and ordering options. **All paramete
     "pageIdx": 0,
     "pageSize": 50
   },
-  "priceInEur": 10000,
-  "date": "2024-01-01",
+  "priceInEur": 805.41,
+  "date": "2023-05-03",
   "orderBy": "date",
   "order": 0,
-  "supplierId": 123
+  "supplierId": 88
 }
 ```
 
