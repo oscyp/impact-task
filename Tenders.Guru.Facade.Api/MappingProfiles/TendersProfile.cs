@@ -9,7 +9,7 @@ public class TendersProfile : Profile
     public TendersProfile()
     {
         CreateMap<Tender, TenderDto>()
-            .ForMember(dest => dest.AwardedValueEur, opt => opt.MapFrom(src =>
+            .ForMember(dest => dest.AmountInEur, opt => opt.MapFrom(src =>
                 string.IsNullOrEmpty(src.AwardedValueEur) ? (decimal?)null : decimal.Parse(src.AwardedValueEur)))
             .ForMember(dest => dest.Suppliers, opt => opt.MapFrom(src =>
                 src.Awarded.SelectMany(award => award.Suppliers).ToList()));

@@ -14,7 +14,7 @@ public class Tender
     public required string Title { get; set; }
 
     [JsonPropertyName("description")]
-    public required string Description { get; set; }
+    public string? Description { get; set; }
 
     [JsonPropertyName("awarded_value_eur")]
     public required string AwardedValueEur { get; set; }
